@@ -1,17 +1,18 @@
 <html>
 <head>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
 
-	<style>
+<style>
 
-	canvas {
-		display: inline-block;
-		background: #202020;
-		width: 95%;
-		height: 95%;
-		box-shadow: 0px 0px 10px blue;
-	}
+canvas {
+    display: inline-block;
+    background: #202020;
+    width: 95%;
+    height: 95%;
+    box-shadow: 0px 0px 10px blue;
+}
 
-	</style>
+</style>
 
 <script>
 function drawBuffer( width, height, context, data ) {
@@ -61,11 +62,6 @@ function gotStream(stream) {
     updateAnalysers();
 }
 
-function getMediaError(err)
-    {
-    console.log("The following error occured: " + JSON.stringify(err, null, 4));
-    }
-
 function updateAnalysers(time) {
     if (!analyserContext) {
         var canvas = document.getElementById("analyser");
@@ -105,7 +101,18 @@ function updateAnalysers(time) {
     rafID = window.requestAnimationFrame( updateAnalysers );
 }
 
-function initAudio() {
+
+window.AudioContext = window.AudioContext || window.webkitAudioContext;
+
+var audioContext = new AudioContext();
+var audioInput = null, realAudioInput = null, inputPoint = null, audioRecorder = null;
+var rafID = null;
+var analyserContext = null;
+var canvasWidth, canvasHeight;
+var recIndex = 0;
+
+$(document).ready(function(){
+
     navigator.getMedia = ( navigator.getUserMedia ||
                        navigator.webkitGetUserMedia ||
                        navigator.mozGetUserMedia ||
@@ -113,23 +120,10 @@ function initAudio() {
 
     if (navigator.getMedia) {
         console.log("getUserMedia");
-        navigator.getMedia({audio: true}, gotStream, getMediaError);
+        navigator.getMedia({audio: true}, gotStream,
+            function (err) { console.log("The following error occured: " + JSON.stringify(err, null, 4));});
         }
-    }
-
-window.AudioContext = window.AudioContext || window.webkitAudioContext;
-
-var audioContext = new AudioContext();
-var audioInput = null,
-    realAudioInput = null,
-    inputPoint = null,
-    audioRecorder = null;
-var rafID = null;
-var analyserContext = null;
-var canvasWidth, canvasHeight;
-var recIndex = 0;
-
-window.addEventListener('load', initAudio );
+});
 
 </script>
 </head>
