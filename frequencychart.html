@@ -63,7 +63,7 @@ function updateAnalysers(time) {
       var offset = canvasHeight - height - 1;
       var barWidth = canvasWidth/analyserNode.frequencyBinCount;
       drawContext.fillStyle = 'white';
-      drawContext.fillRect(i * barWidth, offset, 1, 2);
+      drawContext.fillRect(i * barWidth, offset, 1, 3);
     }
 
     rafID = window.requestAnimationFrame( updateAnalysers );
@@ -108,5 +108,5 @@ $(document).ready(function(){
 </head>
 
 <body>
-    <canvas id="analyser" width="1024" height="500"></canvas>
+    <canvas id="analyser" width="1024" height="512"></canvas>
 </body>
