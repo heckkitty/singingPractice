@@ -1,0 +1,144 @@
+<html>
+<head>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+
+<style>
+
+canvas {
+    display: inline-block;
+    background: #202020;
+    width: 95%;
+    height: 95%;
+    box-shadow: 0px 0px 10px blue;
+}
+
+</style>
+
+<script>
+function gotStream(stream) {
+    // Create an AudioNode from the stream.
+    audioInput = audioContext.createMediaStreamSource(stream);
+
+    analyserNode = audioContext.createAnalyser();
+    analyserNode.fftSize = 2048;
+    analyserNode.smoothingTimeConstant = 0.7;
+    //analyserNode.minDecibels = -140;
+    //analyserNode.maxDecibels = 0;
+    audioInput.connect( analyserNode );
+
+    var canvas = $('#analyser')[0];
+    canvasWidth = canvas.width;
+    canvasHeight = canvas.height;
+    drawContext = canvas.getContext('2d');
+
+
+    var nyquist = audioContext.sampleRate/2;
+    freqBinWidth = nyquist/analyserNode.frequencyBinCount;
+    topBin = topFrequencyHz/freqBinWidth;
+    binWidth = canvasWidth/(topBin+1);
+
+    updateAnalysers();
+}
+
+function drawScale()
+    {
+    var freqLines = [
+        // Bass Cleff
+        97.9989, // G2
+        123.471, // B2
+        146.832, // D3
+        174.614, // F3
+        220.000, // A3
+        // Treble Cleff
+        329.628, // E4
+        391.995, // G4
+        493.883, // B4
+        587.330, // D5
+        698.456, // F5
+        ];
+
+    for (var i = 0; i < freqLines.length; i++)
+        {
+        var offset = Math.round((freqLines[i]/topFrequencyHz) * canvasWidth);
+        //console.log(offset);
+        drawContext.fillStyle = 'white';
+        drawContext.fillRect(offset, 0, 1, canvasHeight);
+        }
+
+    }
+
+function updateAnalysers(time) {
+    drawContext.clearRect(0, 0, canvasWidth, canvasHeight);
+    drawContext.fillStyle = '#F6D565';
+    drawContext.lineCap = 'round';
+
+    drawScale();
+
+    var freqDomain = new Uint8Array(analyserNode.frequencyBinCount);
+    analyserNode.getByteFrequencyData(freqDomain);
+    for (var i = 0; i < topBin; i++) {
+      var value = freqDomain[i];
+      var percent = value / 256;
+      var height = canvasHeight * percent;
+      var offset = canvasHeight - height - 1;
+      var hue = i/analyserNode.frequencyBinCount * 360;
+      drawContext.fillStyle = 'hsl(' + hue + ', 100%, 50%)';
+      drawContext.fillRect(i * binWidth, offset, binWidth, height);
+    }
+
+    rafID = window.requestAnimationFrame( updateAnalysers );
+}
+
+function getFrequencyValue(frequency) {
+  var nyquist = audioContext.sampleRate/2;
+  var index = Math.round(frequency/nyquist * freqDomain.length);
+  return freqDomain[index];
+}
+
+// Global Variables
+var topFrequencyHz = 1024; // Frequency cut off
+var nyquist; // The frequency of the highest frequency bin
+var topBin; // Index of the last bin we're going to use
+var freqBinWidth; // How wide each bin is in HZ
+var binWidth; //width of each bin in pixels
+
+var audioContext;
+var audioInput = null;
+var rafID = null;
+var drawContext = null;
+var canvasWidth, canvasHeight, binWidth;
+
+$(document).ready(function(){
+    try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext);
+        } catch (e) {
+        alert('Web Audio API is not supported in this browser');
+        return;
+        }
+
+    navigator.getUserMedia = (
+        navigator.getUserMedia ||
+        navigator.webkitGetUserMedia ||
+        navigator.mozGetUserMedia ||
+        navigator.msGetUserMedia
+       );
+
+    if (navigator.getUserMedia) {
+        navigator.getUserMedia(
+            {audio: true},
+            gotStream,
+            function (err) { console.log("The following error occured: " + JSON.stringify(err, null, 4));}
+            );
+        }
+    else {
+        alert('getUserMedia is not supported in this browser');
+        }
+
+});
+
+</script>
+</head>
+
+<body>
+    <canvas id="analyser" width="1024" height="512"></canvas>
+</body>
