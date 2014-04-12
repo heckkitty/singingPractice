@@ -9,7 +9,7 @@ canvas {
     background: #202020;
     width: 95%;
     height: 95%;
-    box-shadow: 0px 0px 10px blue;
+    box-shadow: 0 0 10px blue;
 }
 
 </style>
@@ -30,7 +30,6 @@ function gotStream(stream) {
     canvasWidth = canvas.width;
     canvasHeight = canvas.height;
     drawContext = canvas.getContext('2d');
-
 
     var nyquist = audioContext.sampleRate/2;
     freqBinWidth = nyquist/analyserNode.frequencyBinCount;
@@ -119,6 +118,9 @@ var audioInput = null;
 var rafID = null;
 var drawContext = null;
 var canvasWidth, canvasHeight, binWidth;
+// The object running the FFT
+var analyserNode;
+
 
 $(document).ready(function(){
     try {
