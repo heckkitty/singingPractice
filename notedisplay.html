@@ -21,10 +21,10 @@ function gotStream(stream) {
 
     analyserNode = audioContext.createAnalyser();
     analyserNode.fftSize = 2048;
-    analyserNode.smoothingTimeConstant = 0.7;
+    //analyserNode.smoothingTimeConstant = 0.8;
     //analyserNode.minDecibels = -140;
     //analyserNode.maxDecibels = 0;
-    audioInput.connect( analyserNode );
+    //audioInput.connect( analyserNode );
 
     var canvas = $('#analyser')[0];
     canvasWidth = canvas.width;
@@ -36,6 +36,18 @@ function gotStream(stream) {
     freqBinWidth = nyquist/analyserNode.frequencyBinCount;
     topBin = topFrequencyHz/freqBinWidth;
     binWidth = canvasWidth/(topBin+1);
+
+    var gain = audioContext.createGain();
+    gain.gain.value = 0.01;
+    //gain.connect(audioContext.destination);
+    gain.connect(analyserNode);
+
+    var oscillator = audioContext.createOscillator();
+
+    oscillator.type = 0; // sine wave
+    oscillator.frequency.value = 698.456;
+    oscillator.noteOn && oscillator.noteOn(0);
+    oscillator.connect(gain);
 
     updateAnalysers();
 }
@@ -133,6 +145,8 @@ $(document).ready(function(){
     else {
         alert('getUserMedia is not supported in this browser');
         }
+
+
 
 });
 
