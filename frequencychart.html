@@ -9,7 +9,7 @@ canvas {
     background: #202020;
     width: 95%;
     height: 95%;
-    box-shadow: 0px 0px 10px blue;
+    box-shadow: 0 0 10px blue;
 }
 
 </style>
@@ -41,27 +41,29 @@ function updateAnalysers(time) {
     drawContext.fillStyle = '#F6D565';
     drawContext.lineCap = 'round';
 
+    var value, percent, height, offset, barWidth, hue;
+    
     var freqDomain = new Uint8Array(analyserNode.frequencyBinCount);
     analyserNode.getByteFrequencyData(freqDomain);
     for (var i = 0; i < analyserNode.frequencyBinCount; i++) {
-      var value = freqDomain[i];
-      var percent = value / 256;
-      var height = canvasHeight * percent;
-      var offset = canvasHeight - height - 1;
-      var barWidth = canvasWidth/analyserNode.frequencyBinCount;
-      var hue = i/analyserNode.frequencyBinCount * 360;
+      value = freqDomain[i];
+      percent = value / 256;
+      height = canvasHeight * percent;
+      offset = canvasHeight - height - 1;
+      barWidth = canvasWidth/analyserNode.frequencyBinCount;
+      hue = i/analyserNode.frequencyBinCount * 360;
       drawContext.fillStyle = 'hsl(' + hue + ', 100%, 50%)';
       drawContext.fillRect(i * barWidth, offset, barWidth, height);
     }
 
     var timeDomain = new Uint8Array(analyserNode.frequencyBinCount);
     analyserNode.getByteTimeDomainData(timeDomain);
-    for (var i = 0; i < analyserNode.frequencyBinCount; i++) {
-      var value = timeDomain[i];
-      var percent = value / 256;
-      var height = canvasHeight * percent;
-      var offset = canvasHeight - height - 1;
-      var barWidth = canvasWidth/analyserNode.frequencyBinCount;
+    for (i = 0; i < analyserNode.frequencyBinCount; i++) {
+      value = timeDomain[i];
+      percent = value / 256;
+      height = canvasHeight * percent;
+      offset = canvasHeight - height - 1;
+      barWidth = canvasWidth/analyserNode.frequencyBinCount;
       drawContext.fillStyle = 'white';
       drawContext.fillRect(i * barWidth, offset, 1, 3);
     }
@@ -75,6 +77,8 @@ var audioInput = null;
 var rafID = null;
 var drawContext = null;
 var canvasWidth, canvasHeight;
+// The object running the FFT
+var analyserNode;
 
 $(document).ready(function(){
     try {
