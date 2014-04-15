@@ -1,7 +1,7 @@
 <html>
 <head>
-<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
-
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+<script src="toneAnalysis.js"></script>
 <style>
 
 canvas {
@@ -20,11 +20,7 @@ var topFrequencyHz = 1024; // Frequency cut off for display
 var topBinIndex; // Index of the last bin we're going to draw
 var binWidthPx; //width of each bin in pixels
 var canvasWidth, canvasHeight;
-
-// AudioAnalysis
-var sampleRate; // Sample rate of the FFT
-var fftSize = 2048; // Size of the fft, standard maxes at 2048
-var binWidthHz; // How wide each bin is in HZ
+var toneAnalysis;
 
 // Object references
 // @todo Why am I keeping these?  Am I holding refernces to them or something?
@@ -32,43 +28,36 @@ var audioContext;
 var audioInput = null;
 var rafID = null;
 var drawContext = null;
-var analyserNode;
 
 /**
  * This initializes all the audio stuff after we successfully get the mic stream
  */
 function gotStream(stream) {
+    // Create the oscillator node
+    var gain = audioContext.createGain();
+    gain.gain.value = 0.01;
+    //gain.connect(audioContext.destination);
+    //gain.connect(analyserNode);
+
+    var oscillator = audioContext.createOscillator();
+    oscillator.type = 0; // sine wave
+    oscillator.frequency.value = 391.995;
+    oscillator.noteOn && oscillator.noteOn(0);
+    oscillator.connect(gain);
+    
     // Create an AudioNode from the stream.
     audioInput = audioContext.createMediaStreamSource(stream);
-
-    analyserNode = audioContext.createAnalyser();
-    analyserNode.fftSize = fftSize;
-    //analyserNode.smoothingTimeConstant = 0.8;
-    //analyserNode.minDecibels = -140;
-    //analyserNode.maxDecibels = 0;
-    //audioInput.connect( analyserNode );
-
+    
+    //toneAnalysis = new ToneAnalysis(audioInput);
+    toneAnalysis = new ToneAnalysis(audioContext, gain);
+    
     var canvas = $('#analyser')[0];
     canvasWidth = canvas.width;
     canvasHeight = canvas.height;
     drawContext = canvas.getContext('2d');
 
-    sampleRate = audioContext.sampleRate;
-    binWidthHz = sampleRate/fftSize;
-    topBinIndex = topFrequencyHz/binWidthHz;
-    binWidthPx = canvasWidth/(topBinIndex+1);
-
-    var gain = audioContext.createGain();
-    gain.gain.value = 0.01;
-    //gain.connect(audioContext.destination);
-    gain.connect(analyserNode);
-
-    var oscillator = audioContext.createOscillator();
-
-    oscillator.type = 0; // sine wave
-    oscillator.frequency.value = 110.7345;
-    oscillator.noteOn && oscillator.noteOn(0);
-    oscillator.connect(gain);
+    topBinIndex = Math.ceil(topFrequencyHz/toneAnalysis.binWidthHz);
+    binWidthPx = canvasWidth/(topFrequencyHz/toneAnalysis.binWidthHz);
 
     updateAnalysers();
 }
@@ -101,43 +90,16 @@ function drawScale()
  * Draws a line at a particular frequency with a particular fill style
  */
 function drawLineAtFreq(freq, fillStyle) {
-    var offset = Math.round((freq/topFrequencyHz) * canvasWidth);
     drawContext.fillStyle = fillStyle;
-    drawContext.fillRect(offset, 0, 1, canvasHeight);
+    drawContext.fillRect(mapFreqToCanvas(freq), 0, 1, canvasHeight);
     }
 
 /**
- * Estimates the primary tone of a set of frequency domain data by looking for 
- * the max, then using a quadratic curve fit of it and the two nearest points.
- * http://www.dspguru.com/dsp/howtos/how-to-interpolate-fft-peak
+ * Maps a frequency in Hz to a x position on the canvas
  */
-function estimateTone(freqDomain) {
-        var maxIndex = 0;
-        var maxLoudness = 0;
-        /* Skips the DC bin because we don't want that to be our max, and
-           so that our code below doesn't break when we try to read the contents
-           one bin down */
-        for (var i = 1; i < freqDomain.length; i++)
-            if (freqDomain[i] > maxLoudness) {
-                maxLoudness = freqDomain[i];
-                maxIndex = i;
-            }
-        
-        var y1 = freqDomain[maxIndex-1];
-        var y2 = freqDomain[maxIndex];
-        var y3 = freqDomain[maxIndex+1];
-        var d = (y3 - y1) / (2 * (2 * y2 - y1 - y3));
-        var Index = maxIndex + d;
-        
-        return(frequencyOfBinIndex(Index));
+function mapFreqToCanvas(freq) {
+    return(Math.round((freq/topFrequencyHz) * canvasWidth));
     }
-    
-/**
- * Returns the frequency of a bin index, works with fractional indexes
- */
-function frequencyOfBinIndex(index) {
-    return(sampleRate/fftSize*index);
-}
 
 /**
  * This function is called each animation frame to do all the drawing on the canvas
@@ -146,27 +108,26 @@ function updateAnalysers(time) {
     drawContext.clearRect(0, 0, canvasWidth, canvasHeight);
     drawContext.fillStyle = '#F6D565';
     drawContext.lineCap = 'round';
+    
+    toneAnalysis.update();
 
-    var freqDomain = new Uint8Array(analyserNode.frequencyBinCount);
-    analyserNode.getByteFrequencyData(freqDomain);
     for (var i = 0; i < topBinIndex; i++) {
-      var value = freqDomain[i];
+      var value = toneAnalysis.freqDomainData[i];
       var percent = value / 256;
       var height = canvasHeight * percent;
       var offset = canvasHeight - height - 1;
-      var hue = i/analyserNode.frequencyBinCount * 360;
+      var hue = i/toneAnalysis.numBins * 360;
       drawContext.fillStyle = 'hsl(' + hue + ', 100%, 50%)';
-      drawContext.fillRect(i * binWidthPx, offset, binWidthPx, height);
+      drawContext.fillRect(mapFreqToCanvas(toneAnalysis.frequencyOfBinIndex(i))-(binWidthPx/2), offset, binWidthPx, height);
     }
 
     drawScale();
-    
-    var tone = estimateTone(freqDomain);
-    drawLineAtFreq(tone, 'blue');
+
+    drawLineAtFreq(toneAnalysis.freqToneHz, 'blue');
     
     drawContext.fillStyle = "blue";
     drawContext.font = "bold 16px Arial";
-    drawContext.fillText(tone, 900, 50);
+    drawContext.fillText(toneAnalysis.freqToneHz, 900, 50);
     
     rafID = window.requestAnimationFrame( updateAnalysers );
 }
@@ -196,8 +157,6 @@ $(document).ready(function(){
     else {
         alert('getUserMedia is not supported in this browser');
         }
-
-
 
 });
 
