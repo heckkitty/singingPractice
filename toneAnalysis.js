@@ -3,35 +3,34 @@
  */
  
 var ToneAnalysis = function (audioContext, inputNode) {
-    // @QUESTION  Is this the best way to document these member variables? 
     // The largest legal size for the analyserNode fft is 2048
     this.fftSize = 2048;
     // How many frequency bins will be present
     this.numBins = this.fftSize/2;
     // Sample rate of the FFT
-    this.sampleRate;    
+    this.sampleRate = undefined;    
     // The top frequency of the FFT 
-    this.topFrequencyHz;
+    this.topFrequencyHz = undefined;
     // How wide each bin is in HZ (sampleRate/fftSize)
-    this.binWidthHz;
+    this.binWidthHz = undefined;
     // The mose recent frequency Domain data
-    this.freqDomainData;
+    this.freqDomainData = undefined;
     // Loudest tone in Hz
-    this.freqToneHz;
+    this.freqToneHz = undefined;
     
-    // @QUESTION: Do I need to keep these references?
+    // Hold onto some references
     this._audioContext = audioContext;
-    this._analyserNode;
+    this._analyserNode = undefined;
 
     this.initialize(inputNode);  
 };
 
 ToneAnalysis.prototype = {
     initialize: function (inputNode) {
-        var AudioContext = window.AudioContext || window.webkitAudioContext;
-
         this._analyserNode = this._audioContext.createAnalyser();
         this._analyserNode.fftSize = this.fftSize;
+        
+        // Some interesting member variables I may want to play with later
         //analyserNode.smoothingTimeConstant = 0.6;
         //analyserNode.minDecibels = -140;
         //analyserNode.maxDecibels = 0;
