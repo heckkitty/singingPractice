@@ -1,0 +1,28 @@
+<html>
+<head>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+<!-- @TODO Remember to set these up local --> 
+<script src="lib/vexflow-min.js"/>
+<script src="lib/raphael.js"/>
+<script src="toneAnalysis.js"></script>
+<style>
+
+</style>
+
+<script>
+$(document).ready(function () {
+    var renderer = new Vex.Flow.Renderer(staff, Vex.Flow.Renderer.Backends.CANVAS);
+    
+    var ctx = renderer.getContext();
+    var trebble = new Vex.Flow.Stave(10, 0, 400);
+    trebble.addClef("treble").setContext(ctx).draw();
+    
+    var bass = new Vex.Flow.Stave(10, 70, 400);
+    bass.addClef("bass").setContext(ctx).draw();
+}); 
+</script>
+</head>
+
+<body>
+    <canvas id="staff" width=500 height=800 style="background:#fff" ></canvas>
+</body>
